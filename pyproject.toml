@@ -5,7 +5,11 @@ description = "Uses NLLB to generate a streamable audio file from text"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "attrs>=25.3.0",
     "fastapi>=0.115.12",
     "loguru>=0.7.3",
+    "numpy>=2.2.6",
+    "openai-whisper>=20240930",
+    "sounddevice>=0.5.2",
     "uvicorn>=0.34.2",
 ]
