@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "Uses NLLB to generate a streamable audio file from text"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi>=0.115.12",
+    "loguru>=0.7.3",
+    "uvicorn>=0.34.2",
+]
