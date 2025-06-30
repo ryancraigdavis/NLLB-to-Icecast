@@ -8,5 +8,8 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "attrs>=25.3.0",
     "loguru>=0.7.3",
+    "numpy>=2.3.1",
+    "sounddevice>=0.5.2",
 ]
