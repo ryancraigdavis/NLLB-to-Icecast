@@ -2,10 +2,11 @@
 name = "nllb-to-icecast"
 version = "0.1.0"
 description = "Uses NLLB to generate a streamable audio file from text"
+authors = [
+    { name = "Ryan Davis", email = "ryancraigdavis@gmail.com" }
+]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.12",
     "loguru>=0.7.3",
-    "uvicorn>=0.34.2",
 ]
