@@ -48,8 +48,8 @@ class WhisperTranscriber:
         
         logger.info(f"Using device: {self.device}, compute_type: {self.compute_type}")
         
-        # Initialize queues
-        self.audio_queue = queue.Queue(maxsize=5)  # Limit memory usage
+        # Initialize queues - larger queue for church context processing
+        self.audio_queue = queue.Queue(maxsize=10)  # Allow more chunks for context
         self.result_queue = queue.Queue()
         
         # Load model
@@ -120,10 +120,10 @@ class WhisperTranscriber:
         if np.max(np.abs(audio_data)) > 0:
             audio_data = audio_data / np.max(np.abs(audio_data))
         
-        # Check minimum length
+        # Check minimum length - require reasonable chunk for context
         duration = len(audio_data) / sample_rate
-        if duration < self.min_chunk_length_s:
-            logger.debug(f"Audio chunk too short: {duration:.1f}s < {self.min_chunk_length_s}s")
+        if duration < 8.0:  # At least 8 seconds for good context
+            logger.debug(f"Audio chunk too short for context: {duration:.1f}s < 8.0s")
             return
         
         try:
@@ -134,19 +134,27 @@ class WhisperTranscriber:
                 'timestamp': time.time()
             }
             self.audio_queue.put_nowait(audio_item)
-            logger.debug(f"Queued audio chunk: {duration:.1f}s")
+            logger.info(f"Queued audio chunk for real-time processing: {duration:.1f}s")
             
         except queue.Full:
-            logger.warning("Audio queue full, dropping chunk")
+            logger.warning("Audio processing queue full - replacing oldest chunk")
+            # For real-time, replace oldest chunk with current one
+            try:
+                # Remove oldest chunk and add new one
+                self.audio_queue.get_nowait()
+                self.audio_queue.put_nowait(audio_item)
+                logger.info("Replaced oldest chunk with current audio")
+            except:
+                logger.warning("Could not replace audio chunk")
     
     def _process_audio_loop(self):
         """Main processing loop running in separate thread."""
-        logger.info("Transcription processing loop started")
+        logger.info("Transcription processing loop started for real-time translation")
         
         while self.is_processing:
             try:
                 # Get audio from queue with timeout
-                audio_item = self.audio_queue.get(timeout=1.0)
+                audio_item = self.audio_queue.get(timeout=2.0)
                 
                 # Process the audio
                 result = self._transcribe_chunk(audio_item)
@@ -161,6 +169,9 @@ class WhisperTranscriber:
                             self.transcription_callback(result)
                         except Exception as e:
                             logger.error(f"Callback error: {e}")
+                    
+                    # Small delay to prevent overwhelming the output
+                    time.sleep(0.5)  # Half-second pause between transcriptions
                 
             except queue.Empty:
                 continue

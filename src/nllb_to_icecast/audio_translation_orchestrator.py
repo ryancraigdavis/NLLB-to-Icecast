@@ -1,13 +1,14 @@
 import logging
 import time
+import argparse
+import json
 from typing import Dict, List, Optional, Callable
 from attrs import define, field
 import threading
-import argparse
 
 # Import our modules (adjust paths as needed)
-from nllb_to_icecast.audio.capture import AudioCapture
-from nllb_to_icecast.processing.transcription import WhisperTranscriber
+from audio.capture import AudioCapture
+from processing.transcription import WhisperTranscriber
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +37,10 @@ class TranslationPipeline:
     # Components
     audio_capture: Optional[AudioCapture] = field(init=False, default=None)
     transcriber: Optional[WhisperTranscriber] = field(init=False, default=None)
+    
+    # Smart transcription handling
+    last_transcription: str = field(init=False, default="")
+    last_transcription_time: float = field(init=False, default=0.0)
     
     # Callbacks for external integration
     transcription_callback: Optional[Callable] = field(init=False, default=None)
@@ -107,31 +112,88 @@ class TranslationPipeline:
             # Send audio to transcriber
             self.transcriber.process_audio_chunk(audio_data, self.sample_rate)
     
+    def _is_transcription_duplicate_or_correction(self, new_text: str, timestamp: float) -> tuple[bool, str]:
+        """
+        Check if new transcription is a duplicate or correction of previous one.
+        Returns (is_duplicate, corrected_text)
+        """
+        if not self.last_transcription:
+            return False, new_text
+        
+        # Check if this transcription came too soon after the last one (likely overlap)
+        time_diff = timestamp - self.last_transcription_time
+        if time_diff < 3.0:  # Less than 3 seconds apart
+            
+            # Calculate similarity using simple word overlap
+            last_words = set(self.last_transcription.lower().split())
+            new_words = set(new_text.lower().split())
+            
+            # If 70%+ words overlap, this is likely a correction/duplicate
+            if last_words and new_words:
+                overlap = len(last_words.intersection(new_words))
+                similarity = overlap / max(len(last_words), len(new_words))
+                
+                if similarity > 0.7:
+                    # This is likely a correction - use the longer/more complete version
+                    if len(new_text) > len(self.last_transcription):
+                        logger.info(f"🔧 Transcription correction detected:")
+                        logger.info(f"   Previous: '{self.last_transcription}'")
+                        logger.info(f"   Corrected: '{new_text}'")
+                        return True, new_text  # Use the new, more complete version
+                    else:
+                        # New transcription is shorter, likely a duplicate
+                        logger.info(f"🔄 Duplicate transcription detected, skipping")
+                        return True, self.last_transcription  # Keep the previous version
+        
+        return False, new_text
+    
     def _handle_transcription(self, transcription_result: Dict):
         """Handle transcription results from Whisper → process for translation."""
         
-        # Log transcription with more detail
+        # Extract transcription details
         text = transcription_result['text'].strip()
         language = transcription_result['language']
         confidence = transcription_result['confidence']
         lang_probability = transcription_result.get('language_probability', 0.0)
         rtf = transcription_result['real_time_factor']
+        timestamp = transcription_result['timestamp']
         
-        if text:  # Only process non-empty transcriptions
-            logger.info(f"🎙️  [{language}] ({lang_probability:.2f}) {text}")
-            logger.info(f"⚡ Processed in {rtf:.2f}x real-time (confidence: {confidence:.2f})")
-            
-            # Show language detection details
-            if lang_probability < 0.7:
-                logger.warning(f"⚠️  Low language confidence! Detected '{language}' with {lang_probability:.2f} probability")
-            
-            # Call external transcription callback if provided
-            if self.transcription_callback:
-                try:
-                    self.transcription_callback(transcription_result)
-                except Exception as e:
-                    logger.error(f"Transcription callback error: {e}")
-            
+        if not text:  # Skip empty transcriptions
+            return
+        
+        # Check for duplicates or corrections
+        is_duplicate, final_text = self._is_transcription_duplicate_or_correction(text, timestamp)
+        
+        if is_duplicate and final_text == self.last_transcription:
+            # This is a duplicate we should skip
+            return
+        
+        # Update our tracking
+        self.last_transcription = final_text
+        self.last_transcription_time = timestamp
+        
+        # Update the result with final text
+        transcription_result['text'] = final_text
+        transcription_result['is_correction'] = is_duplicate
+        
+        # Log transcription with correction info
+        correction_indicator = " [CORRECTED]" if is_duplicate else ""
+        logger.info(f"🎙️  [{language}] ({lang_probability:.2f}) {final_text}{correction_indicator}")
+        logger.info(f"⚡ Processed in {rtf:.2f}x real-time (confidence: {confidence:.2f})")
+        
+        # Show language detection details
+        if lang_probability < 0.7:
+            logger.warning(f"⚠️  Low language confidence! Detected '{language}' with {lang_probability:.2f} probability")
+        
+        # Call external transcription callback if provided
+        if self.transcription_callback:
+            try:
+                self.transcription_callback(transcription_result)
+            except Exception as e:
+                logger.error(f"Transcription callback error: {e}")
+        
+        # Only translate if we have target languages
+        if self.target_languages:
             # TODO: Send to NLLB for translation
             # self._handle_translation(transcription_result)
             
