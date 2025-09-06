@@ -81,6 +81,9 @@ connection_manager = ConnectionManager()
 pipeline: Optional[TranslationPipeline] = None
 pipeline_lock = threading.Lock()
 
+# Event loop reference for thread-safe async calls
+main_loop: Optional[asyncio.AbstractEventLoop] = None
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
@@ -89,6 +92,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Thread-safe async broadcasting
+def schedule_broadcast(event: WebSocketEvent):
+    """Schedule an async broadcast from a sync context."""
+    if main_loop and not main_loop.is_closed():
+        asyncio.run_coroutine_threadsafe(
+            connection_manager.broadcast(event), 
+            main_loop
+        )
 
 # WebSocket callback handlers
 def transcription_callback(result: Dict):
@@ -106,8 +118,8 @@ def transcription_callback(result: Dict):
         }
     )
     
-    # Use asyncio to broadcast from sync context
-    asyncio.create_task(connection_manager.broadcast(event))
+    # Schedule broadcast from thread-safe context
+    schedule_broadcast(event)
 
 def translation_callback(result: Dict):
     """Handle translation results and broadcast to WebSocket clients."""
@@ -123,8 +135,8 @@ def translation_callback(result: Dict):
         }
     )
     
-    # Use asyncio to broadcast from sync context
-    asyncio.create_task(connection_manager.broadcast(event))
+    # Schedule broadcast from thread-safe context
+    schedule_broadcast(event)
 
 async def broadcast_status(status_data: Dict):
     """Broadcast status updates to WebSocket clients."""
@@ -303,6 +315,8 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup."""
+    global main_loop
+    main_loop = asyncio.get_event_loop()
     logger.info("🚀 NLLB Translation API started")
     logger.info("📡 WebSocket endpoint: /ws")
     logger.info("🔧 REST API endpoints: /pipeline/*, /audio/devices")
