@@ -1,0 +1,43 @@
+[project]
+name = "nllb-to-icecast"
+version = "0.1.0"
+description = "Uses NLLB to generate a streamable audio file from text"
+authors = [
+    { name = "Ryan Davis", email = "ryancraigdavis@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "attrs>=23.0.0,<25.0.0",
+    "faster-whisper>=1.1.1",
+    "loguru>=0.7.3",
+    "numpy==2.1.2",
+    "sounddevice>=0.5.2",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0", 
+    "torchaudio>=2.0.0",
+    "transformers>=4.35.0",
+    "sentencepiece>=0.1.99",
+    "accelerate>=0.20.0",
+    "sacremoses>=0.0.53",
+]
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+
+[build-system]
+requires = ["hatchling"]
+
+build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/nllb_to_icecast"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
