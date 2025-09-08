@@ -364,15 +364,32 @@ class TranslationPipeline:
             return "Unknown"
 
         try:
+            import sounddevice as sd
             devices = self.audio_capture.list_audio_devices()
             device_index = self.audio_capture.device_index
 
-            if device_index is not None:
-                for device in devices:
-                    if device["index"] == device_index:
-                        return device["name"]
-        except:
-            pass
+            # If device_index is None, get the actual default device
+            if device_index is None:
+                try:
+                    device_index = sd.default.device[0]  # Get default input device
+                except:
+                    return "System Default (Unknown)"
+
+            # Find the device name by index
+            for device in devices:
+                if device["index"] == device_index:
+                    device_name = device["name"]
+                    # Check if this is the system default
+                    try:
+                        if device_index == sd.default.device[0]:
+                            return f"{device_name} (System Default)"
+                        else:
+                            return device_name
+                    except:
+                        return device_name
+                        
+        except Exception as e:
+            logger.error(f"Error getting device name: {e}")
 
         return "Default Device"
 

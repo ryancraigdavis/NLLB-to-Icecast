@@ -39,6 +39,7 @@
 	let audioLevel = 0;
 	let errorMessage = '';
 	let connectionStatus = 'Disconnected';
+	let currentAudioDevice = 'Not selected';
 
 	// WebSocket connection
 	function connectWebSocket() {
@@ -72,6 +73,7 @@
 						case 'status':
 							isRunning = message.data.is_running;
 							audioLevel = message.data.audio_level || 0;
+							currentAudioDevice = message.data.audio_device || 'Unknown';
 							break;
 						
 						case 'error':
@@ -207,6 +209,11 @@
 					{/each}
 				</select>
 			</div>
+		</div>
+
+		<div class="audio-device-info">
+			<label>🎤 Current Audio Input:</label>
+			<span class="device-name">{currentAudioDevice}</span>
 		</div>
 
 		<div class="action-buttons">
@@ -378,6 +385,35 @@
 		color: #6c757d;
 	}
 
+	.audio-device-info {
+		background: #e9f7ef;
+		border: 1px solid #c3e6cb;
+		border-radius: 8px;
+		padding: 1rem;
+		margin-bottom: 1.5rem;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.audio-device-info label {
+		font-weight: 600;
+		color: #155724;
+		margin: 0;
+	}
+
+	.device-name {
+		background: white;
+		padding: 0.5rem 1rem;
+		border-radius: 20px;
+		font-family: monospace;
+		font-size: 0.9rem;
+		color: #495057;
+		border: 1px solid #dee2e6;
+		flex: 1;
+		text-align: center;
+	}
+
 	.action-buttons {
 		display: flex;
 		justify-content: center;
@@ -454,8 +490,8 @@
 	}
 
 	.translation-display {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
+		display: flex;
+		flex-direction: column;
 		gap: 2rem;
 	}
 
@@ -505,6 +541,14 @@
 
 	.translation-panel .text-output {
 		border-left-color: #28a745;
+		font-size: 5.5rem;
+		line-height: 1.2;
+		font-weight: 600;
+		text-align: center;
+		min-height: 300px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	@media (max-width: 768px) {
@@ -518,8 +562,19 @@
 			margin: 0;
 		}
 
-		.translation-display {
-			grid-template-columns: 1fr;
+		.translation-panel .text-output {
+			font-size: 3rem;
+			min-height: 200px;
+		}
+
+		.audio-device-info {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.5rem;
+		}
+
+		.audio-device-info label {
+			text-align: center;
 		}
 
 		.container {
