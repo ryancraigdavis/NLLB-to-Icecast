@@ -251,6 +251,7 @@ class TranslationPipeline:
             "zh": "chinese",
             "fa": "farsi",
             "ru": "russian",
+            "ja": "japanese",
         }
 
         # Convert Whisper language code to full name

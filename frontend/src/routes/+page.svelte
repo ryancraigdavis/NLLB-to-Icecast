@@ -11,7 +11,8 @@
 		{ code: 'ko', name: 'Korean', nllbCode: 'korean' },
 		{ code: 'zh', name: 'Chinese', nllbCode: 'mandarin' },
 		{ code: 'fa', name: 'Farsi/Persian', nllbCode: 'farsi' },
-		{ code: 'ru', name: 'Russian', nllbCode: 'russian' }
+		{ code: 'ru', name: 'Russian', nllbCode: 'russian' },
+		{ code: 'ja', name: 'Japanese', nllbCode: 'japanese' }
 	];
 
 	const outputLanguages = [
@@ -22,7 +23,8 @@
 		{ code: 'mandarin', name: 'Chinese/Mandarin' },
 		{ code: 'farsi', name: 'Farsi/Persian' },
 		{ code: 'russian', name: 'Russian' },
-		{ code: 'english', name: 'English' }
+		{ code: 'english', name: 'English' },
+		{ code: 'japanese', name: 'Japanese' }
 	];
 
 	// State variables

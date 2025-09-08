@@ -21,6 +21,7 @@ LANGUAGE_CODES = {
     "farsi": "pes_Arab",
     "persian": "pes_Arab",  # Alias for Farsi
     "russian": "rus_Cyrl",
+    "japanese": "jpn_Jpan",
     # Common language codes
     "en": "eng_Latn",
     "es": "spa_Latn",
@@ -30,6 +31,7 @@ LANGUAGE_CODES = {
     "zh": "zho_Hans",
     "fa": "pes_Arab",
     "ru": "rus_Cyrl",
+    "ja": "jpn_Jpan",
 }
 
 
