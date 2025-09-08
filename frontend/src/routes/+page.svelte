@@ -27,9 +27,20 @@
 		{ code: 'japanese', name: 'Japanese' }
 	];
 
+	// Font size options for translation display
+	const fontSizeOptions = [
+		{ value: '2rem', label: 'Small' },
+		{ value: '3rem', label: 'Medium' },
+		{ value: '4rem', label: 'Large' },
+		{ value: '5.5rem', label: 'Extra Large (Default)' },
+		{ value: '7rem', label: 'Huge' },
+		{ value: '9rem', label: 'Massive' }
+	];
+
 	// State variables
 	let selectedInputLanguage = null;
 	let selectedOutputLanguage = '';
+	let selectedFontSize = '5.5rem';
 	let isConnected = false;
 	let isRunning = false;
 	let ws: WebSocket | null = null;
@@ -211,6 +222,15 @@
 					{/each}
 				</select>
 			</div>
+
+			<div class="selector-group">
+				<label for="font-size">Translation Size:</label>
+				<select id="font-size" bind:value={selectedFontSize}>
+					{#each fontSizeOptions as size}
+						<option value={size.value}>{size.label}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 
 		<div class="audio-device-info">
@@ -247,14 +267,6 @@
 		</div>
 	{/if}
 
-	{#if isRunning}
-		<div class="audio-level">
-			<label>Audio Level:</label>
-			<div class="level-bar">
-				<div class="level-fill" style="width: {audioLevel * 100}%"></div>
-			</div>
-		</div>
-	{/if}
 
 	<div class="translation-display">
 		<div class="transcription-panel">
@@ -282,7 +294,7 @@
 					<span class="confidence">({Math.round(translationConfidence * 100)}%)</span>
 				{/if}
 			</h3>
-			<div class="text-output">
+			<div class="text-output translation-text" style="--selected-font-size: {selectedFontSize};">
 				{translation || (isRunning && transcription ? 'Translating...' : 'Translation will appear here')}
 			</div>
 		</div>
@@ -291,10 +303,11 @@
 
 <style>
 	.container {
-		max-width: 1200px;
 		margin: 0 auto;
 		padding: 2rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	header {
@@ -467,29 +480,6 @@
 		margin-bottom: 1rem;
 	}
 
-	.audio-level {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 2rem;
-		background: #e9ecef;
-		padding: 1rem;
-		border-radius: 5px;
-	}
-
-	.level-bar {
-		flex: 1;
-		height: 10px;
-		background: #dee2e6;
-		border-radius: 5px;
-		overflow: hidden;
-	}
-
-	.level-fill {
-		height: 100%;
-		background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
-		transition: width 0.1s ease;
-	}
 
 	.translation-display {
 		display: flex;
@@ -543,7 +533,6 @@
 
 	.translation-panel .text-output {
 		border-left-color: #28a745;
-		font-size: 5.5rem;
 		line-height: 1.2;
 		font-weight: 600;
 		text-align: center;
@@ -551,6 +540,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		font-size: var(--selected-font-size, 5.5rem);
 	}
 
 	@media (max-width: 768px) {
@@ -565,7 +555,6 @@
 		}
 
 		.translation-panel .text-output {
-			font-size: 3rem;
 			min-height: 200px;
 		}
 
