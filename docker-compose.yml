@@ -1,0 +1,64 @@
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - NLLB_ENVIRONMENT=development
+      - NLLB_HOST=0.0.0.0
+      - NLLB_PORT=8000
+      - NLLB_LOG_LEVEL=DEBUG
+      - NLLB_RELOAD=true
+      - NLLB_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
+    volumes:
+      - ./backend/src:/app/src:ro
+      - backend-models:/app/models
+      - /dev/snd:/dev/snd  # Audio device access
+    devices:
+      - /dev/snd  # Audio device access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - nllb-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - nllb-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  backend-models:
+    driver: local
+
+networks:
+  nllb-network:
+    driver: bridge
