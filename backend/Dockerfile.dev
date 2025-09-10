@@ -1,5 +1,5 @@
-# Backend Dockerfile for NLLB Translation API
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04 as base
+# Backend Development Dockerfile for NLLB Translation API
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -45,9 +45,6 @@ RUN ln -s /usr/local/bin/python3.12 /usr/local/bin/python \
 # Install uv package manager
 RUN python -m pip install uv
 
-# Create app user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
 # Set working directory
 WORKDIR /app
 
@@ -58,30 +55,26 @@ COPY pyproject.toml uv.lock README.md ./
 RUN python -m uv venv /opt/venv --python python
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Copy source code first
+COPY src/ ./src/
+
 # Install Python dependencies
 RUN uv sync --frozen
 
-# Create models directory with proper permissions
-RUN mkdir -p /app/models && chown -R appuser:appuser /app/models
+# Install the package in development mode
+RUN uv pip install -e .
 
-# Copy source code
-COPY --chown=appuser:appuser src/ ./src/
-
-# Switch to non-root user
-USER appuser
+# Create models directory
+RUN mkdir -p /app/models
 
 # Expose port
 EXPOSE 8000
 
-# Set environment variables for production
+# Set development environment variables
 ENV NLLB_HOST=0.0.0.0
 ENV NLLB_PORT=8000
-ENV NLLB_ENVIRONMENT=production
+ENV NLLB_ENVIRONMENT=development
 ENV NLLB_MODEL_CACHE_DIR=/app/models
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-
-# Start the application
-CMD ["/opt/venv/bin/python", "-m", "nllb_to_icecast.run_production"]
+# Start the development application with reload
+CMD ["/opt/venv/bin/python", "-m", "nllb_to_icecast.run_api", "--host", "0.0.0.0", "--port", "8000", "--reload"]
