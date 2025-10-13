@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  tts:
+    build:
+      context: ./backend/tts-service
+      dockerfile: Dockerfile
+    container_name: nllb-tts-service
+    ports:
+      - "8001:8001"
+    volumes:
+      # Mount models directory to persist downloaded models
+      - ./backend/tts-models:/app/models
+      # Mount output directory for generated audio files
+      - ./backend/tts-output:/app/output
+    environment:
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    networks:
+      - nllb-network
+
+  # For development with the main backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: nllb-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/tests:/app/tests
+    environment:
+      - TTS_SERVICE_URL=http://tts:8001
+    depends_on:
+      - tts
+    networks:
+      - nllb-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: nllb-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+      - VITE_TTS_URL=http://localhost:8001
+    networks:
+      - nllb-network
+
+networks:
+  nllb-network:
+    driver: bridge
